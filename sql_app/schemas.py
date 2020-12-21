@@ -11,10 +11,10 @@ class AccionBase(BaseModel):
     orm_mode = True
 
 class ActividadBase(BaseModel):
-    id_actividad : int
-    descripcion : str
-    realizado : str
-    lista_id : int
+    id_actividad :  Optional[int]
+    descripcion : Optional[str]
+    realizado : Optional[str]
+    lista_id : Optional[int]
 
     class Config:
         orm_mode = True
@@ -119,7 +119,7 @@ class TareaBase(BaseModel):
     id_tarea : int
     descripcion : str
     observaciones : Optional[str]
-    incio : Optional[datetime]
+    inicio : Optional[datetime]
     termino : Optional[datetime]
     nivel : int
     usuario_id : int
@@ -131,6 +131,19 @@ class TareaBase(BaseModel):
 
     class Config:
         orm_mode = True
+
+class TareaUpdate(TareaBase):
+    descripcion : str
+    observaciones : Optional[str]
+    inicio : Optional[datetime]
+    termino : Optional[datetime]
+    nivel : Optional[int]
+    usuario_id : Optional[int]
+    proceso_id : Optional[int]
+    inicioregistrado : Optional[datetime]
+    terminoregistrado : Optional[datetime]
+    estadotarea_id :  Optional[int]
+    tareamadre : Optional[int]
 
 class TareaCreate(TareaBase):
       id_tarea  = 0
@@ -163,3 +176,16 @@ class UsuarioBase (BaseModel):
 
 class UsuarioCreate(UsuarioBase):
     id_usuario = 0
+
+class LoginTipo(BaseModel):
+    idUsuario: int
+    idPerfil: int
+    nombreUsuario: str
+    token : str
+
+class accesoTipo(BaseModel):
+    username : str
+    password  : str
+
+class HomeCustom(BaseModel):
+    idUsuario: int

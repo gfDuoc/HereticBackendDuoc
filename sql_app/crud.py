@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 from . import models, schemas
+import datetime
 
 #############################################################################
 #accion [R]
@@ -15,11 +16,18 @@ def get_acciones(db: Session, skip: int = 0 , limit : int = 100):
 def get_actividad(db: Session, actividad_id: int):
     return db.query(models.Actividad).filter(models.Actividad.id_actividad == actividad_id).first()
 
-def get_actividades(db: Session, skip: int = 0 , limit : int = 100):
-    return db.query(models.Actividad).offset(skip).limit(limit).all()
+def get_actividades(db: Session, skip: int = 0 , limit : int = 100, lista_id: int = 0):
+    db_actividad = []
+    if lista_id > 0:
+        db_actividad =  db.query(models.Actividad).filter(models.Actividad.lista_id == lista_id).offset(skip).limit(limit).all()
+    if lista_id < 1:
+        db_actividad = db.query(models.Actividad).offset(skip).limit(limit).all()
+    return db_actividad
 
 def create_actividades(db: Session, actividad: schemas.ActividadCreate):
     last_id = db.query(func.max(models.Actividad.id_actividad)).scalar()
+    if last_id is None:
+        last_id = 0
     db_actividad = models.Actividad(**actividad.dict())
     db_actividad.id_actividad = (last_id+1)
     db.add(db_actividad)
@@ -56,6 +64,8 @@ def get_cargos(db: Session, skip: int = 0 , limit : int = 100):
 
 def create_cargos(db: Session , cargo: schemas.CargoCreate):
     last_id = db.query(func.max(models.Cargo.id_cargo)).scalar()
+    if last_id is None:
+        last_id = 0
     db_cargo = models.Cargo(**cargo.dict())
     db_cargo.id_cargo = (last_id+1)
     db.add(db_cargo)
@@ -88,6 +98,8 @@ def get_empresas(db: Session, skip: int = 0 , limit : int = 100):
 
 def create_empresas(db: Session , empresa: schemas.EmpresaCreate):
     last_id = db.query(func.max(models.Empresa.id_empresa)).scalar()
+    if last_id is None:
+        last_id = 0
     db_empresa = models.Empresa(**empresa.dict())
     db_empresa.id_empresa = (last_id+1)
     db.add(db_empresa)
@@ -127,6 +139,8 @@ def get_historialRegistros (db:Session, skip: int = 0, limit : int = 100):
 
 def create_historialRegistros(db:Session,historial: schemas.historial_registroCreate):
     last_id = db.query(func.max(models.historial_registro.id_historial)).scalar()
+    if last_id is None:
+        last_id = 0
     db_historial = models.historial_registro(**historial.dict())
     db_historial.id_historial = (last_id+1)
     db.add(db_historial)
@@ -144,6 +158,8 @@ def get_historicoTareas(db:Session,skip: int = 0, limit : int = 100):
 
 def create_historicoTareas(db:Session, historico:schemas.historico_tareaCreate):
     last_id = db.query(func.max(models.historico_tarea.id_historicotarea)).scalar()
+    if last_id is None:
+        last_id = 0
     db_historico = models.historico_tarea(**historico.dict())
     db_historico.id_historicotarea = (last_id+1)
     db.add(db_historico)
@@ -156,11 +172,18 @@ def create_historicoTareas(db:Session, historico:schemas.historico_tareaCreate):
 def get_lista(db:Session, lista_id: int):
     return db.query(models.Lista).filter(models.Lista.id_lista == lista_id).first()
 
-def get_listas(db:Session,skip: int = 0, limit : int = 100):
-    return db.query(models.Lista).offset(skip).limit(limit).all()
+def get_listas(db:Session,skip: int = 0, limit : int = 100, task: int = 0):
+    db_lista  = []
+    if task > 0:
+     db_lista = db.query(models.Lista).filter(models.Lista.tarea_id == task).offset(skip).limit(limit).all()
+    if task < 1:
+     db_lista = db.query(models.Lista).offset(skip).limit(limit).all()
+    return db_lista
 
 def create_listas(db:Session, lista:schemas.ListaCreate):
-    last_id = db.quert(func.max(models.Lista.id_lista)).scalar()
+    last_id = db.query(func.max(models.Lista.id_lista)).scalar()
+    if last_id is None:
+        last_id = 0
     db_lista = models.Lista(**lista.dict())
     db_lista.id_lista = (last_id+1)
     db.add(db_lista)
@@ -210,6 +233,8 @@ def get_procesos(db:Session, skip: int = 0 , limit : int = 100):
 
 def create_procesos(db:Session, proceso: schemas.ProcesoCreate):
     last_id = db.query(func.max(models.Proceso.id_proceso)).scalar()
+    if last_id is None:
+        last_id = 0
     db_proceso = models.Proceso(**proceso.dict())
     db_proceso.id_proceso = (last_id+1)
     db.add(db_proceso)
@@ -246,19 +271,33 @@ def delete_proceso(db: Session, proceso_id: int):
 def get_tarea(db:Session, tarea_id: int):
     return db.query(models.Tarea).filter(models.Tarea.id_tarea == tarea_id).first()
 
-def get_tareas(db:Session, skip: int = 0 , limit : int = 100):
-    return db.query(models.Tarea).offset(skip).limit(limit).all()
+def get_tareas(db:Session, skip: int = 0 , limit : int = 100, proceso_id: int = 0):
+    db_tareas = []
+    if proceso_id > 0:
+        db_tareas = db.query(models.Tarea).filter(models.Tarea.proceso_id == proceso_id).offset(skip).limit(limit).all()
+    if proceso_id < 1:
+        db_tareas = db.query(models.Tarea).offset(skip).limit(limit).all()
+    return db_tareas
+
+def get_tareas_by_user(db:Session,user_id: int):
+    return db.query(models.Tarea).filter(models.Tarea.usuario_id == user_id).all()
 
 def create_tarea(db:Session, tarea: schemas.TareaCreate):
     last_id = db.query(func.max(models.Tarea.id_tarea)).scalar()
     db_tarea = models.Tarea(**tarea.dict())
-    db_tarea.id_tarea = (last_id)
+    print(tarea.dict())
+    if last_id is None:
+        last_id = 0
+    db_tarea.id_tarea = (last_id+1)
+    if db_tarea.tareamadre == 0:
+        db_tarea.tareamadre = None
+    print(db_tarea.__dict__)
     db.add(db_tarea)
     db.commit()
     db.refresh(db_tarea)
     return db_tarea
 
-def update_tarea(db:Session,tarea:schemas.TareaBase):
+def update_tarea(db:Session,tarea:schemas.TareaUpdate):
     db_tarea = db.query(models.Tarea).filter(models.Tarea.id_tarea == tarea.id_tarea).first()
     remplace = models.Tarea(**tarea.dict(exclude_unset=True))
     if remplace.descripcion is not None:
@@ -266,7 +305,7 @@ def update_tarea(db:Session,tarea:schemas.TareaBase):
     if remplace.observaciones is not None:
         db_tarea.observaciones = remplace.observaciones
     if remplace.inicio is not None:
-        db_tarea.incio = remplace.incio
+        db_tarea.inicio = remplace.inicio
     if remplace.termino is not None:
         db_tarea.termino = remplace.termino
     if remplace.nivel is not None:
@@ -283,6 +322,10 @@ def update_tarea(db:Session,tarea:schemas.TareaBase):
         db_tarea.estadotarea_id = remplace.estadotarea_id
     if remplace.tareamadre is not None:
         db_tarea.tareamadre = remplace.tareamadre
+    if remplace.estadotarea_id == 2:
+        db_tarea.inicioregistrado =  datetime.datetime.now()
+    if remplace.estadotarea_id == 3:
+        db_tarea.terminoregistrado = datetime.datetime.now()
     db.commit()
     return db_tarea
 
@@ -302,6 +345,8 @@ def get_tokens(db:Session, skip: int = 0 , limit : int = 100):
 
 def create_tokens(db:Session, token:schemas.TokenRegistroCreate):
     last_id = db.query(func.max(models.TokenRegistro.id_token)).scalar()
+    if last_id is None:
+        last_id = 0
     db_token = models.TokenRegistro(**token.dict()) 
     db_token.id_token = (last_id+1)
     db.add(db_token)
@@ -314,11 +359,16 @@ def create_tokens(db:Session, token:schemas.TokenRegistroCreate):
 def get_usario(db: Session, user_id: int):
     return db.query(models.Usuario).filter(models.Usuario.id_usuario == user_id).first()
 
+def get_usario_by_name(db:Session, username):
+    return db.query(models.Usuario).filter(models.Usuario.nombreusuario == username).first()
+
 def get_usarios(db: Session, skip: int = 0 , limit : int = 100):
     return db.query(models.Usuario).offset(skip).limit(limit).all()
 
 def create_usuarios(db: Session , user: schemas.UsuarioCreate):
     last_id = db.query(func.max(models.Usuario.id_usuario)).scalar()
+    if last_id is None:
+        last_id = 0
     db_user = models.Usuario(**user.dict())
     db_user.id_usuario = (last_id+1)
     db.add(db_user)

@@ -4,11 +4,13 @@ to start de virtual env: env\Scripts\activate
 """
 from typing import List , Optional
 
-from fastapi import Depends, FastAPI, HTTPException , Response
+from fastapi import Depends, FastAPI, HTTPException , Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
-
+import hashlib
+import jwt
+import datetime
 from . import crud, models, schemas
 from .database import SessionLocal, engine
 
@@ -110,8 +112,8 @@ def create_activities(activity:schemas.ActividadCreate, db: Session= Depends(get
     return db_activity
 
 @app.get("/actividades/", response_model=List[schemas.ActividadBase], tags=["Actividades"])
-def read_activities(skip: int= 0, limit: int = 100, db: Session = Depends(get_db)):
-    activities = crud.get_actividades(db, skip=skip, limit=limit)
+def read_activities(skip: int= 0, limit: int = 100, db: Session = Depends(get_db), lista: int = 0):
+    activities = crud.get_actividades(db, skip=skip, limit=limit, lista_id=lista)
     return activities
 
 @app.put("/actividades/{activity_id}",response_model=schemas.ActividadBase,tags=["Actividades"])
@@ -198,8 +200,8 @@ def read_status(skip: int= 0, limit: int = 100, db: Session = Depends(get_db)):
     return status
 
 @app.get("/estado_tareas/{status_id}", response_model=schemas.Estado_tareaBase, tags=["Estado tarea"])
-def read_state(state_id:int, db:Session = Depends(get_db)):
-    db_state = crud.get_estadoTarea(db, estadoTarea_id=state_id)
+def read_state(status_id:int, db:Session = Depends(get_db)):
+    db_state = crud.get_estadoTarea(db, estadoTarea_id=status_id)
     if db_state is None:
         raise HTTPException(status_code=404, detail="estado no encontrado")
     return db_state
@@ -251,8 +253,8 @@ def create_lists(listas:schemas.ListaCreate,db:Session=Depends(get_db)):
 
 
 @app.get("/listas/", response_model=List[schemas.ListaBase],tags=["Lista"])
-def read_lists(skip: int= 0, limit: int = 100, db: Session = Depends(get_db)):
-    lists = crud.get_listas(db, skip=skip, limit=limit)
+def read_lists(skip: int= 0, limit: int = 100, task: int = 0 ,db: Session = Depends(get_db)):
+    lists = crud.get_listas(db, skip=skip, limit=limit, task=task)
     return lists
 
 @app.put("/listas/{list_id}",response_model=schemas.ListaBase,tags=["Lista"])
@@ -337,16 +339,17 @@ def create_tasks(tasks:schemas.TareaCreate,db:Session = Depends(get_db)):
    return db_task
 
 @app.get("/tareas/", response_model=List[schemas.TareaBase],tags=["Tarea"])
-def read_tasks(skip: int= 0, limit: int = 100, db: Session = Depends(get_db)):
-    tasks = crud.get_tareas(db, skip=skip, limit=limit)
+def read_tasks(skip: int= 0, limit: int = 100, db: Session = Depends(get_db), proceso: int = 0):
+    tasks = crud.get_tareas(db, skip=skip, limit=limit, proceso_id= proceso)
     return tasks
 
-@app.put("/tareas/{tasks_id}",response_model=schemas.TareaBase,tags=["Tarea"])
-def update_tasks(tasks:schemas.TareaBase,db:Session = Depends(get_db)):
+@app.put("/tareas/{tasks_id}",response_model=schemas.TareaUpdate,tags=["Tarea"])
+def update_tasks(tasks:schemas.TareaUpdate,db:Session = Depends(get_db)):
+    print(Request.__dict__)
     db_task = crud.update_tarea(db=db, tarea=tasks)
     return db_task
 
-@app.get("/tareas/{tasks_id}",response_model=schemas.TareaBase,tags=["Tarea"])
+@app.get("/tareas/{task_id}",response_model=schemas.TareaBase,tags=["Tarea"])
 def read_task(task_id:int, db:Session = Depends(get_db)):
     db_task = crud.get_tarea(db, tarea_id=task_id)
     if db_task is None:
@@ -407,3 +410,35 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     db_user = crud.delete_usuarios(db,user_id = user_id)
     return Response(status_code=200)
 
+
+@app.post("/usuario/validar", response_model=schemas.LoginTipo,tags=["usuarios"])
+def login(yser:schemas.accesoTipo, db:Session = Depends(get_db)):
+    db_user = crud.get_usario_by_name(db=db,username=yser.username)
+    print(db_user)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="usuario no encontrado")
+    md = hashlib.md5(yser.password.encode('utf-8')).hexdigest()
+    print("###################################")
+    print(md)
+    print(db_user.contrasenna)
+    print("###################################")
+    if db_user.contrasenna == md:
+        encoded_jwt = jwt.encode({"usuario_id" :db_user.id_usuario}, 'secret', algorithm='HS256')
+        toka = schemas.TokenRegistroCreate(token=encoded_jwt,vencimiento =  datetime.datetime.utcnow() + datetime.timedelta(days=15),usuario_id = db_user.id_usuario)
+        db_token = crud.create_tokens(db=db,token=(toka))
+        da_login = {
+                "idUsuario": db_user.id_usuario,
+                "idPerfil": db_user.perfil_id,
+                "nombreUsuario": db_user.nombreusuario,
+                "token" : db_token.token
+        }
+
+        return  da_login
+    raise HTTPException(status_code=404, detail="usuario no encontrado")
+
+
+@app.post("/home", response_model=List[schemas.TareaBase],tags=["Home"])
+def home (Home:schemas.HomeCustom, db: Session = Depends(get_db)):
+    print(Request.__dict__)
+    tasks = crud.get_tareas_by_user(db=db, user_id=Home.idUsuario)
+    return tasks
